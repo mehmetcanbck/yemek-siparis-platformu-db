@@ -1,3 +1,6 @@
+USE YemekSiparisi_VTYS;
+GO
+
 -- =====================================================================================
 -- ADIM 2: İLİŞKİLİ TABLOLAR (FOREIGN KEY) VE ASKIDA YEMEK MODÜLÜ
 -- =====================================================================================
@@ -85,3 +88,4 @@ CREATE TABLE AskidaYemekIslem (
     CONSTRAINT FK_AskidaIslem_Kullanici FOREIGN KEY (KullaniciID) REFERENCES Kullanici(KullaniciID),
     CONSTRAINT FK_AskidaIslem_Siparis FOREIGN KEY (SiparisID) REFERENCES Siparis(SiparisID)
 );
+

@@ -1,3 +1,6 @@
+USE YemekSiparisi_VTYS;
+GO
+
 -- =====================================================================================
 -- ADIM 5: İLERİ DÜZEY SORGULAR VE GÖRÜNÜMLER (VIEWS)
 -- =====================================================================================
@@ -80,3 +83,4 @@ WHERE KullaniciID IN (
     FROM Siparis 
     WHERE OdemeTipi = 'AskidaYemek'
 );
+

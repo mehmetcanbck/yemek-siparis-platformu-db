@@ -1,3 +1,6 @@
+USE YemekSiparisi_VTYS;
+GO
+
 -- =====================================================================================
 -- ADIM 3: SAHTE VERİ (MOCK DATA) EKLENMESİ
 -- =====================================================================================
@@ -83,3 +86,4 @@ INSERT INTO AskidaYemekIslem (KullaniciID, IslemTipi, Tutar, SiparisID) VALUES
 
 -- Havuzdan bakiye düşülür: 500 TL - 150 TL = 350 TL kaldı.
 UPDATE AskidaYemekHavuzu SET ToplamBakiye = ToplamBakiye - 150.00 WHERE HavuzID = 1;
+

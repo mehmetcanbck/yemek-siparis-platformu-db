@@ -1,3 +1,6 @@
+USE YemekSiparisi_VTYS;
+GO
+
 -- =====================================================================================
 -- ADIM 4: VERİTABANI PROGRAMLANABİLİRLİĞİ (TRIGGER & INDEX)
 -- =====================================================================================
@@ -81,3 +84,4 @@ GO
 CREATE NONCLUSTERED INDEX IDX_Siparis_Kullanici 
 ON Siparis(KullaniciID);
 GO
+

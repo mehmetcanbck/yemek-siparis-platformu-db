@@ -1,3 +1,9 @@
+CREATE DATABASE YemekSiparisi_VTYS;
+GO
+
+USE YemekSiparisi_VTYS;
+GO
+
 -- =====================================================================================
 -- ADIM 1: TEMEL (BAĞIMSIZ) TABLOLARIN VE KISITLAMALARIN OLUŞTURULMASI
 -- =====================================================================================
@@ -45,3 +51,4 @@ CREATE TABLE Kurye (
     -- CHECK Kısıtlaması 3: Kurye durumu sadece mantıklı değerleri alabilir
     CONSTRAINT CHK_Kurye_Durum CHECK (Durum IN ('Musait', 'Teslimatta', 'Pasif'))
 );
+
