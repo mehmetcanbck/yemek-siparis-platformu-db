@@ -1,6 +1,6 @@
 # VTYS-1 Dönem Projesi: Çevrimiçi Yemek Sipariş Platformu Veritabanı Tasarımı Teslim Raporu
 
-**Ad Soyad:** Mehmet Can (Soyadınızı formda düzeltiniz)
+**Ad Soyad:** Mehmet Can
 **Ogrenci No:** [Öğrenci Numaranızı Yazınız]
 
 ## 1. Proje Özeti ve Kapsamı
@@ -9,12 +9,12 @@
 
 ## 2. "Askıda Yemek" Modülü İş Kuralları
 **Bağış Mantığı:** Sisteme kayıtlı ve rolü 'Hayirsever' olan kullanıcılar havuza bakiye bağışlayabilir. Yapılan her bağış `AskidaYemekIslem` adlı log tablosuna eklenir.
-**Gizlilik Kuralları:** Bağış yapan kullanıcının kimliği (KullaniciID) güvenlik ve denetim (audit) amacıyla veritabanında tutulur. Ancak uygulamanın ön yüzünde (UI) bu kişilerin bilgileri anonim ('Gizli Hayırsever') olarak gösterilmek üzere kurgulanmıştır.
+**Gizlilik Kuralları:** Yönergede istenen "kimliğini gizleyerek veya açıkça bağış yapabilme" şartını teknik olarak tam karşılamak için `AskidaYemekIslem` tablosuna **`GizliMi (BIT)`** kolonu eklenmiştir. Bu değer 1 (True) ise bağışçı anonim sayılır ve kimliği gizlenir, 0 ise açıkça listelenir.
 **Yararlanma Şartları:** Sistemde rolü 'IhtiyacSahibi' olarak doğrulanmış kullanıcılar, sipariş verirken `OdemeTipi = 'AskidaYemek'` seçeneğini kullanabilir. Bu sayede kişilerin ifşa olmadan ücretsiz yemek yiyebilmesi sağlanmıştır.
 **Bakiye Yönetimi:** Havuzdaki para miktarı yazılım katmanına bırakılmamıştır. Veritabanı seviyesinde yazılan `trg_AskidaYemekBakiyeGuncelle` adlı tetikleyici (trigger) sayesinde, log tablosuna bir bağış eklendiğinde ana havuzdaki (`AskidaYemekHavuzu`) para otomatik olarak artar; bir kullanım yapıldığında ise otomatik olarak eksilir. Böylece bakiye hesaplamasında hata payı sıfıra indirilmiştir.
 
 ## 3. Varlık-İlişki (ER) Diyagramı
-*(Not: Teslim edeceğiniz Word veya PDF dosyasına kendi çizdiğiniz veya SQL Server'dan aldığınız ER diyagramının görselini ekleyiniz. İlişkiler şu şekildedir:)*
+*(Not: Teslim edeceğiniz Word veya PDF dosyasına SQL Server'dan aldığınız ER diyagramının görselini ekleyiniz. İlişkiler şu şekildedir:)*
 **İlişki Açıklamaları:**
 - **Restoran - Urun (1:N):** Bir restoranın birden çok ürünü olabilir, bir ürün sadece bir restorana aittir.
 - **Kullanici - Siparis (1:N):** Bir müşteri birden çok sipariş verebilir.
@@ -28,7 +28,7 @@
 - `Urun`: Restoranların menülerindeki yemekleri tutar.
 - `Siparis` ve `SiparisDetay`: Sipariş başlıklarını ve içeriğindeki yemekleri tutar.
 - `AskidaYemekHavuzu`: Sistemdeki mevcut toplam askı bakiyesini tek satırda tutar.
-- `AskidaYemekIslem`: Askıya yapılan para giriş ve çıkışlarının tarihsel dökümünü tutar.
+- `AskidaYemekIslem`: Askıya yapılan para giriş ve çıkışlarının tarihsel dökümünü tutar (`GizliMi` kolonu ile anonimlik sağlar).
 **Constraint Kullanımı:**
 - **CHECK:** Mantıksız verileri engellemek için kullanıldı. Örn: Restoran puanı `0-5` arasında sınırlandı, Sipariş tutarı ve Ürün fiyatlarının negatif (`> 0`) olması engellendi. Rollerin sadece 3 belirli tipte olabileceği kısıtlandı.
 - **UNIQUE:** Kullanıcıların e-posta ve telefon numaralarının tekrarlanmasını (aynı kişinin iki hesap açmasını) engellemek için kullanıldı.
@@ -40,8 +40,9 @@
 - `vw_AktifRestoranMenuleri`: Müşteri uygulamayı açtığında sadece aktif restoranların, silinmemiş aktif yemeklerini listelemek için yazıldı.
 - `vw_AskidaYemekHavuzDurumu`: Havuzdaki güncel parayı ve yapılan toplam bağış/harcama miktarını tek satırda gösteren yönetici raporudur.
 **Tetikleyiciler (Triggers):**
-- `trg_SiparisTeslimEdildi`: Bir sipariş teslim edildiğinde, siparişin toplam tutarını ilgili restoranın Toplam Ciro'suna otomatik ekler. Toplu insertlerde (Bulk) veri kaybı olmaması için Set-Based mantıkla yazılmıştır.
+- `trg_SiparisTeslimEdildi`: Bir sipariş teslim edildiğinde, siparişin toplam tutarını ilgili restoranın Toplam Ciro'suna otomatik ekler. 
 - `trg_AskidaYemekBakiyeGuncelle`: İşlem tablosuna para girişi veya çıkışı eklendiğinde ana havuzu günceller.
+- **Not:** Her iki trigger da aynı anda birden fazla sipariş (Toplu/Bulk Insert) gelmesi durumunda verilerin eksik hesaplanmaması için Enterprise seviyesi olan **Küme Tabanlı (Set-Based)** mantıkla kodlanmıştır.
 **İndeksleme (Index):** Milyonlarca sipariş olduğunda performansı korumak için `SiparisTarihi` ve `KullaniciID` kolonlarına indeks tanımlandı. Çünkü raporlama ve müşterinin kendi siparişlerini listelemesi esnasında WHERE şartında en çok bu iki kolon kullanılacaktır.
 
 ## 6. Analitik Sorgu Senaryoları
@@ -50,8 +51,8 @@
 **Alt Sorgu (Subquery):** IN / EXISTS ifadeleri kullanılarak; sisteme üye olan kullanıcılar içerisinde, `AskidaYemek` ödeme yöntemini kullanarak en az 1 kez yemek yiyen 'IhtiyacSahibi' profilli müşterilerin iletişim listesi (alt sorgu filtrelemesi ile) çıkarılmıştır.
 
 ## 7. Yapay Zeka (AI) Beyanı
-**Asistan Kullanımı:** Bu projenin geliştirilmesi sırasında yapay zeka asistanından faydalanılmıştır. Veritabanının 3NF kurallarına uygun tasarlanması için tablo kurgularında (özellikle Havuz ve Log tablolarının ayrılması hususunda) fikir alışverişi yapılmıştır. SQL kodlarının (Trigger'lardaki Bulk Insert bug'larının çözümü vb.) optimize edilmesinde ve 50+ satırlık mantıklı sahte test (Mock) verilerinin yazılmasında asistandan yardım alınmıştır.
-**Özgünlük Onayı:** AI tarafından üretilen çözümler doğrudan kopyalanmamış; projenin özel kural ve yönergelerine (CHECK kısıtlamaları, Soft Delete vb.) uyumlu olacak şekilde sistem tarafımca kurgulanmış, üretilen veri modeli test edilip tam olarak anlaşıldıktan sonra projeye entegre edilmiştir.
+**Asistan Kullanımı:** Bu projenin geliştirilmesi sırasında yapay zeka asistanından faydalanılmıştır. Veritabanının 3NF kurallarına uygun tasarlanması için tablo kurgularında (özellikle Havuz ve Log tablolarının ayrılması hususunda) fikir alışverişi yapılmıştır. SQL kodlarının (Trigger'lardaki Bulk Insert bug'larının set-based yaklaşımla çözümü) optimize edilmesinde ve istenen zorunlu "5 Restoran, 20 Müşteri, 50 Ürün, 100 Sipariş" kotasının T-SQL `WHILE` döngüleri kullanılarak dinamik şekilde sisteme eklenmesinde asistandan sentaks (kod yazımı) yardımı alınmıştır.
+**Özgünlük Onayı:** AI tarafından üretilen çözümler doğrudan kopyalanmamış; projenin özel kural ve yönergelerine (GizliMi kolonu zorunluluğu, CHECK kısıtlamaları, Soft Delete vb.) uyumlu olacak şekilde sistem tarafımca kurgulanmış, üretilen veri modeli test edilip tam olarak anlaşıldıktan sonra projeye entegre edilmiştir.
 
 ## 8. GitHub ve Versiyonlama
 **Repo Linki:** `https://github.com/mehmetcanbck/yemek-siparis-platformu-db.git`
