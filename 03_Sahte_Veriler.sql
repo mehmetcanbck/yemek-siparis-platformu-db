@@ -104,9 +104,9 @@ INSERT INTO AskidaYemekHavuzu (ToplamBakiye) VALUES (0);
 GO
 
 -- Hayırseverler bağış yapar (Trigger ile havuz otomatik 1500 TL olacak)
-INSERT INTO AskidaYemekIslem (KullaniciID, IslemTipi, Tutar, SiparisID) VALUES
-(2, 'Bagis', 1000.00, NULL),
-(12, 'Bagis', 500.00, NULL);
+INSERT INTO AskidaYemekIslem (KullaniciID, IslemTipi, Tutar, SiparisID, GizliMi) VALUES
+(2, 'Bagis', 1000.00, NULL, 1), -- Müşteri 2 kimliğini gizleyerek bağış yaptı
+(12, 'Bagis', 500.00, NULL, 0); -- Müşteri 12 açıkça bağış yaptı
 GO
 
 -- İhtiyaç sahipleri (ID: 5 ve 15) askıdan sipariş verir

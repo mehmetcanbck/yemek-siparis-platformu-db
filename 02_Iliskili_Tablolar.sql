@@ -80,6 +80,7 @@ CREATE TABLE AskidaYemekIslem (
     Tutar DECIMAL(10,2) NOT NULL,
     IslemTarihi DATETIME DEFAULT GETDATE(),
     SiparisID INT NULL, -- Sadece işlem tipi 'Kullanim' ise hangi siparişte harcandığı buraya yazılır
+    GizliMi BIT DEFAULT 0, -- Yönergedeki "kimliğini gizleyerek veya açıkça" kuralı için
     
     -- CHECK Kısıtlaması 8: Tutar 0'dan büyük olmalı ve İşlem Tipi belirlenen değerlerde olmalı
     CONSTRAINT CHK_AskidaIslem_Tutar CHECK (Tutar > 0),
