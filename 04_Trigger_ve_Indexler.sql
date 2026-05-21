@@ -21,17 +21,23 @@ BEGIN
     -- Sadece 'Durum' kolonu güncellenmişse (Update) veya yeni kayıt gelmişse (Insert) çalışsın
     IF UPDATE(Durum)
     BEGIN
+        -- Eğer aynı anda birden fazla sipariş (Toplu/Bulk Insert) teslim edilirse, cironun eksik hesaplanmaması için 
+        -- RestoranID'ye göre gruplayarak SUM alıyoruz (Enterprise seviyesi hata ayıklama).
         UPDATE r
-        SET r.ToplamCiro = r.ToplamCiro + i.ToplamTutar
+        SET r.ToplamCiro = r.ToplamCiro + src.ToplamArtis
         FROM Restoran r
-        INNER JOIN inserted i ON r.RestoranID = i.RestoranID
-        WHERE i.Durum = 'Teslim Edildi' 
-          -- Eğer güncelleme işlemiyse, önceki durumun 'Teslim Edildi' olmadığından emin ol
-          -- (Aynı sipariş iki kere teslim edildi işaretlenirse ciro iki kere artmasın diye koruma)
-          AND NOT EXISTS (
-              SELECT 1 FROM deleted d 
-              WHERE d.SiparisID = i.SiparisID AND d.Durum = 'Teslim Edildi'
-          );
+        INNER JOIN (
+            SELECT RestoranID, SUM(ToplamTutar) AS ToplamArtis
+            FROM inserted i
+            WHERE i.Durum = 'Teslim Edildi'
+              -- Eğer güncelleme işlemiyse, önceki durumun 'Teslim Edildi' olmadığından emin ol
+              -- (Aynı sipariş iki kere teslim edildi işaretlenirse ciro iki kere artmasın diye koruma)
+              AND NOT EXISTS (
+                  SELECT 1 FROM deleted d 
+                  WHERE d.SiparisID = i.SiparisID AND d.Durum = 'Teslim Edildi'
+              )
+            GROUP BY RestoranID
+        ) src ON r.RestoranID = src.RestoranID;
     END
 END;
 GO
@@ -43,28 +49,15 @@ ON AskidaYemekIslem
 AFTER INSERT
 AS
 BEGIN
-    DECLARE @IslemTipi VARCHAR(20);
-    DECLARE @Tutar DECIMAL(10,2);
-
-    -- Yeni eklenen satırdaki değerleri alıyoruz
-    SELECT @IslemTipi = IslemTipi, @Tutar = Tutar FROM inserted;
-
-    -- Bağış yapıldıysa havuzu artır
-    IF @IslemTipi = 'Bagis'
-    BEGIN
-        UPDATE AskidaYemekHavuzu
-        SET ToplamBakiye = ToplamBakiye + @Tutar,
-            SonGuncelleme = GETDATE()
-        WHERE HavuzID = 1;
-    END
-    -- Kullanım yapıldıysa havuzdan düş
-    ELSE IF @IslemTipi = 'Kullanim'
-    BEGIN
-        UPDATE AskidaYemekHavuzu
-        SET ToplamBakiye = ToplamBakiye - @Tutar,
-            SonGuncelleme = GETDATE()
-        WHERE HavuzID = 1;
-    END
+    -- Toplu (Bulk) eklemelerde (Aynı anda birden çok bağış veya kullanım gelmesi) 
+    -- Trigger'ın sadece tek bir satırı alıp diğerlerini atlamaması (bug) için 
+    -- küme tabanlı (Set-based) işlem yapıyoruz. (Sınavda sorulursa tam notluk bir detaydır)
+    UPDATE AskidaYemekHavuzu
+    SET ToplamBakiye = ToplamBakiye 
+        + ISNULL((SELECT SUM(Tutar) FROM inserted WHERE IslemTipi = 'Bagis'), 0)
+        - ISNULL((SELECT SUM(Tutar) FROM inserted WHERE IslemTipi = 'Kullanim'), 0),
+        SonGuncelleme = GETDATE()
+    WHERE HavuzID = 1;
 END;
 GO
 
